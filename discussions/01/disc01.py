@@ -20,7 +20,7 @@ def data2array(filepath):
     100000
     """
 
-    return ...
+    return np.genfromtxt(filepath, delimiter=',')[1:]
 
 
 def ends_in_9(arr):
@@ -36,4 +36,11 @@ def ends_in_9(arr):
     True
     """
 
-    return ...
+    hit = 0
+    arr_int = (arr*100).astype(int)
+    
+    for val in arr_int:
+        if val%10 == 9:
+            hit += 1
+    
+    return hit/len(arr)
