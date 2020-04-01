@@ -36,11 +36,8 @@ def ends_in_9(arr):
     True
     """
 
-    hit = 0
-    arr_int = (arr*100).astype(int)
+    arr_int = np.round(arr*100)
     
-    for val in arr_int:
-        if val%10 == 9:
-            hit += 1
+    hit_arr = arr_int[arr_int%10 == 9]
     
-    return hit/len(arr)
+    return hit_arr.size/arr.size
