@@ -152,6 +152,10 @@ def evens_reversed(N):
     >>> evens_reversed(10)
     '10 08 06 04 02'
     """
+    if !N:
+        return ''
+    if N = 0:
+        return ''
     
     if N % 2 == 1:
         N -= 1
@@ -337,8 +341,8 @@ def movie_stats(movies):
     movies_after_Harry = movies[movies['#1 Movie'].str.contains('Harry')]['Year'] + 1
     avg_after_harry = movies[movies['Year'].isin(movies_after_Harry)]['Number of Movies'].mean()
 
-    responses = pd.Series([num_years, tot_movies, yr_fewest_movies, highest_per_movie, second_lowest, avg_after_harry], 
-        index = ['num_years', 'tot_movies', 'yr_fewest_movies', 'highest_per_movie', 'second_lowest', 'avg_after_harry'])
+    responses = pd.Series([num_years, tot_movies, yr_fewest_movies, avg_gross, highest_per_movie, second_lowest, avg_after_harry], 
+        index = ['num_years', 'tot_movies', 'yr_fewest_movies', 'avg_gross', 'highest_per_movie', 'second_lowest', 'avg_after_harry'])
 
     return responses
     
