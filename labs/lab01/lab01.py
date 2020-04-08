@@ -152,9 +152,9 @@ def evens_reversed(N):
     >>> evens_reversed(10)
     '10 08 06 04 02'
     """
-    if !N:
+    if N == '':
         return ''
-    if N = 0:
+    if N == 0:
         return ''
     
     if N % 2 == 1:
