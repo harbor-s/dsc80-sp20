@@ -59,7 +59,14 @@ def median(nums):
     True
     """
     
-    return ...
+    while len(nums) > 2:
+        nums.remove(min(nums))
+        nums.remove(max(nums))
+        
+    if len(nums) == 2:
+        return (nums[0] + nums[1])/2
+    elif len(nums) == 1:
+        return nums[0]
 
 
 # ---------------------------------------------------------------------
@@ -83,7 +90,16 @@ def same_diff_ints(ints):
     False
     """
 
-    return ...
+    if len(ints) == 0:
+        return False
+
+    for d in range(1,len(ints)):
+        for k in range(len(ints) - d):
+            diff = abs(ints[k] - ints[k+d])
+            if diff == d:
+                return True
+    
+    return False
 
 
 # ---------------------------------------------------------------------
@@ -108,7 +124,11 @@ def prefixes(s):
     """
 
 
-    return ...
+    str = ''
+    for n in range(len(s)):
+        str += (s[:n+1])
+    
+    return str
 
 
 # ---------------------------------------------------------------------
@@ -133,7 +153,19 @@ def evens_reversed(N):
     '10 08 06 04 02'
     """
     
-    return ...
+    if N % 2 == 1:
+        N -= 1
+    
+    padding = len(str(N))
+    
+    string = str(N)
+    
+    while N > 2:
+        N = N - 2
+        string +=' '
+        string += str(N).zfill(padding)
+    
+    return string
 
 
 # ---------------------------------------------------------------------
@@ -154,7 +186,10 @@ def last_chars(fh):
     'hrg'
     """
 
-    return ...
+    lc = ''
+    for line in fh:
+        lc += line[-2:-1]
+    return lc
 
 
 # ---------------------------------------------------------------------
@@ -178,8 +213,11 @@ def arr_1(A):
     >>> np.all(out >= A)
     True
     """
+    
+    ind_sqrt = np.sqrt(np.arange(0,len(A)))
+    A = A + ind_sqrt
 
-    return ...
+    return A
 
 
 def arr_2(A):
@@ -200,7 +238,7 @@ def arr_2(A):
     True
     """
 
-    return ...
+    return A%16 == 0
 
 
 def arr_3(A):
@@ -224,8 +262,10 @@ def arr_3(A):
     True
     """
 
-    return ...
-
+    changes = np.diff(A)
+    days_tracked = A[:-1]
+    rates = (changes/days_tracked)
+    return np.around(rates, 2)
 
 def arr_4(A):
     """
@@ -246,7 +286,17 @@ def arr_4(A):
     True
     """
 
-    return ...
+    leftovers = np.cumsum(20 % A)
+    
+    stocks_buyable = leftovers//A
+    
+    target = np.where(stocks_buyable > 0)
+    if len(target[0]) == 0:
+        return -1
+    else:
+        return target[0][0]
+    
+    return stocks_buyable
 
 
 # ---------------------------------------------------------------------
@@ -273,7 +323,24 @@ def movie_stats(movies):
     True
     """
 
-    return ...
+    num_years = movies['Year'].max() - movies['Year'].min()
+    tot_movies = movies['Number of Movies'].sum()
+    yr_fewest_movies = movies.loc[movies['Number of Movies'].idxmin(), 'Year']
+    avg_gross = movies['Total Gross'].mean()
+
+    movies['Gross per Movie'] = movies['Total Gross']/movies['Number of Movies']
+    highest_per_movie = movies.loc[movies['Gross per Movie'].idxmax(), 'Year']
+
+    two_smallest = movies.nsmallest(2, 'Total Gross')
+    second_lowest = two_smallest.loc[two_smallest['Total Gross'].idxmax(), '#1 Movie']
+
+    movies_after_Harry = movies[movies['#1 Movie'].str.contains('Harry')]['Year'] + 1
+    avg_after_harry = movies[movies['Year'].isin(movies_after_Harry)]['Number of Movies'].mean()
+
+    responses = pd.Series([num_years, tot_movies, yr_fewest_movies, highest_per_movie, second_lowest, avg_after_harry], 
+        index = ['num_years', 'tot_movies', 'yr_fewest_movies', 'highest_per_movie', 'second_lowest', 'avg_after_harry'])
+
+    return responses
     
 
 # ---------------------------------------------------------------------
@@ -310,7 +377,40 @@ def parse_malformed(fp):
     True
     """
 
-    return ...
+    first = []
+    last = []
+    weight = []
+    height = []
+    geo = []
+    
+    with open(fp) as fh:
+        next(fh)
+        for line in fh:
+            l = line.split(',')
+            
+            to_delete = []
+            
+            for i in range(0, len(l)):
+                l[i] = l[i].replace('"', '')
+                l[i] = l[i].replace('\n', '')
+                if l[i] == '':
+                    to_delete.append(i)
+            
+            for i in to_delete:
+                del l[i]
+            
+            first.append(l[0])
+            last.append(l[1])
+            weight.append(float(l[2]))
+            height.append(float(l[3]))
+            geo.append(l[4]+','+l[5])
+            
+    d = {'first' : first,
+        'last' : last,
+        'weight' : weight,
+        'height' : height,
+        'geo' : geo}
+    return pd.DataFrame(d)
 
 
 # ---------------------------------------------------------------------
