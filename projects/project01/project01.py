@@ -32,7 +32,32 @@ def get_assignment_names(grades):
     True
     '''
     
-    return ...
+    labs = []
+    projects = []
+    discs = []
+    checkpoints = []
+
+    for column_name in grades.columns:
+        if column_name[:3] == 'lab' and column_name[-2:].isnumeric():
+            labs.append(column_name)
+        elif column_name[:7] == 'project' and column_name[-2:].isnumeric():
+            if column_name[10:20] == 'checkpoint':
+                checkpoints.append(column_name)
+            else:
+                projects.append(column_name)
+        elif column_name[:4] == 'disc' and column_name[-2:].isnumeric():
+            discs.append(column_name)
+        
+    names = {
+        'lab' : labs,
+        'project': projects,
+        'midterm': ['Midterm'],
+        'final': ['Final'],
+        'disc' : discs,
+        'checkpoint' : checkpoints
+    }
+    
+    return names
 
 
 # ---------------------------------------------------------------------
@@ -55,7 +80,17 @@ def projects_total(grades):
     >>> 0.7 < out.mean() < 0.9
     True
     '''
-    return ...
+    assignment_names = get_assignment_names(grades)
+    nona_grades = grades.fillna(0)
+    
+    project_sum = 0
+    project_max_sum = 0
+    for proj in assignment_names['project']:
+        project_sum += nona_grades[proj]
+        project_max_sum += nona_grades[f'{proj} - Max Points']
+    total_grade = project_sum/project_max_sum
+    
+    return total_grade
 
 
 # ---------------------------------------------------------------------
@@ -82,7 +117,16 @@ def last_minute_submissions(grades):
     8
     """
 
-    return ...
+    assignment_names = get_assignment_names(grades)
+    
+    false_late_count = []
+    for l in assignment_names['lab']:
+        lateness = f'{l} - Lateness (H:M:S)'
+        false_late_count.append(grades[lateness][grades[lateness] < '07:00:00'][grades[lateness] > '00:00:00'].count())
+
+    last_minutes = pd.Series(false_late_count, assignment_names['lab'])
+
+    return last_minutes
 
 
 # ---------------------------------------------------------------------
@@ -104,7 +148,9 @@ def lateness_penalty(col):
     True
     """
         
-    return ...
+    penalty = col.apply(lambda x: 1.0 if x < '07:00:00' else 0.9 if x < '168:00:00' else 0.8 if '336:00:00' else 0.5)
+    
+    return penalty
 
 
 # ---------------------------------------------------------------------
