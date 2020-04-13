@@ -19,7 +19,7 @@ def question01(data, labels):
     True
     """
 
-    return ...
+    return pd.DataFrame(data, labels)
 
 
 def question02(ser):
@@ -34,6 +34,6 @@ def question02(ser):
     True
     """
 
-    return ...
+    return ser.loc[ser.values%3 == 0].index
 
 
