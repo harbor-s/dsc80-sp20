@@ -80,17 +80,22 @@ def projects_total(grades):
     >>> 0.7 < out.mean() < 0.9
     True
     '''
-    assignment_names = get_assignment_names(grades)
-    nona_grades = grades.fillna(0)
+    proj_names = get_assignment_names(grades)['project']
+    proj_grades_sum = np.array([float(0) for _ in range(grades.shape[0])])
+    grades = grades.fillna(0)
     
-    project_sum = 0
-    project_max_sum = 0
-    for proj in assignment_names['project']:
-        project_sum += nona_grades[proj]
-        project_max_sum += nona_grades[f'{proj} - Max Points']
-    total_grade = project_sum/project_max_sum
-    
-    return total_grade
+    for proj in proj_names:
+        points = grades[proj]
+        max_points = grades[f'{proj} - Max Points']        
+        if f'{proj}_free_response' in grades.columns:
+            points += grades[f'{proj}_free_response']
+            max_points += grades[f'{proj}_free_response - Max Points']
+        
+        proj_grade = points/max_points
+        proj_grades_sum += proj_grade
+        
+    proj_grades = proj_grades_sum/len(proj_names)
+    return proj_grades
 
 
 # ---------------------------------------------------------------------
@@ -148,7 +153,7 @@ def lateness_penalty(col):
     True
     """
         
-    penalty = col.apply(lambda x: 1.0 if x < '07:00:00' else 0.9 if x < '168:00:00' else 0.8 if '336:00:00' else 0.5)
+    penalty = col.apply(lambda x: 1.0 if x < '07:00:00' else 0.9 if x < '168:00:00' else 0.8 if x < '336:00:00' else 0.5)
     
     return penalty
 
@@ -176,7 +181,15 @@ def process_labs(grades):
     True
     """
 
-    return ...
+    lab_names = get_assignment_names(grades)['lab']
+    labdf = grades[lab_names].fillna(0)
+
+    for l in lab_names:
+        #print(labdf[l] / grades[f'{l} - Max Points'])
+        #print(lateness_penalty(grades[f'{l} - Lateness (H:M:S)']))
+        labdf.loc[:,l] = (labdf[l] / grades[f'{l} - Max Points']) * lateness_penalty(grades[f'{l} - Lateness (H:M:S)'])
+
+    return labdf
 
 
 # ---------------------------------------------------------------------
@@ -198,7 +211,8 @@ def lab_total(processed):
     True
     """
 
-    return ...
+    tot = processed.sum(axis=1)/processed.shape[1]
+    return tot
 
 
 # ---------------------------------------------------------------------
@@ -220,8 +234,37 @@ def total_points(grades):
     >>> 0.7 < out.mean() < 0.9
     True
     """
-        
-    return ...
+
+    assgn_names = get_assignment_names(grades)
+
+    proj_tot = projects_total(grades)
+    lab_tot = lab_total(process_labs(grades))
+
+    checkpoint_names = assgn_names['checkpoint']
+    checkpoint_grades_sum = [float(0) for _ in range(grades.shape[0])]
+    for checkpoint in checkpoint_names:
+        checkpoint_grade = grades[checkpoint] / grades[f'{checkpoint} - Max Points']
+        checkpoint_grade = checkpoint_grade.fillna(0)
+        checkpoint_grades_sum += checkpoint_grade
+    checkpoint_tot = checkpoint_grades_sum / len(checkpoint_names)
+
+    disc_names = assgn_names['disc']
+    disc_grades_sum = [float(0) for _ in range(grades.shape[0])]
+    for disc in disc_names:
+        disc_grade = grades[disc] / grades[f'{disc} - Max Points']
+        disc_grade = disc_grade.fillna(0)
+        disc_grades_sum += disc_grade
+    disc_tot = disc_grades_sum / len(disc_names)
+
+    mid = grades['Midterm'] / grades['Midterm - Max Points']
+    mid = mid.fillna(0)
+
+    fin = grades['Final'] / grades['Final - Max Points']
+    fin = fin.fillna(0)
+
+    total = (0.20 * lab_tot) + (0.30 * proj_tot) + (0.025 * checkpoint_tot) + (0.025 * disc_tot) + (0.15 * mid) + (0.30 * fin)
+    
+    return total
 
 
 def final_grades(total):
@@ -236,7 +279,8 @@ def final_grades(total):
     True
     """
 
-    return ...
+    letters = total.apply(lambda x: 'A' if x >= 0.9 else 'B' if x >= 0.8 else 'C' if x >= 0.7 else 'D' if x >= 0.6 else 'F')
+    return letters
 
 
 def letter_proportions(grades):
@@ -255,7 +299,9 @@ def letter_proportions(grades):
     True
     """
 
-    return ...
+    letter_grades = (final_grades(total_points(grades)))
+    proportions = letter_grades.value_counts(normalize=True)
+    return proportions
 
 # ---------------------------------------------------------------------
 # Question # 8
@@ -277,8 +323,19 @@ def simulate_pval(grades, N):
     True
     """
 
-    return ...
+    soph_not_better = []
+    
+    for i in range (N):
+        samp = grades.sample(frac = 1, replace = True)
+        avg_all = total_points(samp).mean()
+        avg_so = total_points(samp.loc[grades['Level'] == 'SO']).mean()
 
+        if avg_so <= avg_all:
+            soph_not_better.append(1)
+        else:
+            soph_not_better.append(0)
+    p_val = np.count_nonzero(soph_not_better) / len(soph_not_better)
+    return p_val
 
 # ---------------------------------------------------------------------
 # Question # 9
@@ -301,7 +358,69 @@ def total_points_with_noise(grades):
     True
     """
 
-    return ...
+    assgn_names = get_assignment_names(grades)
+    grades = grades.fillna(0)
+    num_rows = grades.shape[0]
+
+    proj_names = get_assignment_names(grades)['project']
+    proj_grades_sum = np.array([float(0) for _ in range(grades.shape[0])])
+
+    for proj in proj_names:
+        points = grades[proj]
+        max_points = grades[f'{proj} - Max Points']
+        if f'{proj}_free_response' in grades.columns:
+            points += grades[f'{proj}_free_response']
+            max_points += grades[f'{proj}_free_response - Max Points']
+
+        proj_grade = (points / max_points) + np.random.normal(0, 0.02, size=(num_rows))
+        proj_grade = np.clip(proj_grade,0,1)
+        proj_grades_sum += proj_grade
+
+    proj_tot = proj_grades_sum / len(proj_names)
+
+    lab_names = get_assignment_names(grades)['lab']
+    labdf = grades[lab_names].fillna(0)
+
+    for l in lab_names:
+        labdf.loc[:, l] = np.clip(\
+                                ((labdf[l] / grades[f'{l} - Max Points'])\
+                                  + np.random.normal(0, 0.02, size=(num_rows)))\
+                                * lateness_penalty(grades[f'{l} - Lateness (H:M:S)'])\
+                        ,0,1)
+
+    lab_tot = lab_total(labdf)
+
+
+    checkpoint_names = assgn_names['checkpoint']
+    checkpoint_grades_sum = [float(0) for _ in range(grades.shape[0])]
+    for checkpoint in checkpoint_names:
+        checkpoint_grade = grades[checkpoint] / grades[f'{checkpoint} - Max Points']
+        checkpoint_grade = checkpoint_grade.fillna(0) + np.random.normal(0, 0.02, size=(num_rows))
+        checkpoint_grade = np.clip(checkpoint_grade,0,1)
+        checkpoint_grades_sum += checkpoint_grade
+    checkpoint_tot = checkpoint_grades_sum / len(checkpoint_names)
+
+    disc_names = assgn_names['disc']
+    disc_grades_sum = [float(0) for _ in range(grades.shape[0])]
+    for disc in disc_names:
+        disc_grade = grades[disc] / grades[f'{disc} - Max Points']
+        disc_grade = disc_grade.fillna(0) + np.random.normal(0, 0.02, size=(num_rows))
+        disc_grade = np.clip(disc_grade,0,1)
+        disc_grades_sum += disc_grade
+    disc_tot = disc_grades_sum / len(disc_names)
+
+    mid = grades['Midterm'] / grades['Midterm - Max Points']
+    mid = mid.fillna(0) + np.random.normal(0, 0.02, size=(num_rows))
+    mid = np.clip(mid,0,1)
+
+    fin = grades['Final'] / grades['Final - Max Points']
+    fin = fin.fillna(0) + np.random.normal(0, 0.02, size=(num_rows))
+    fin = np.clip(fin,0,1)
+
+    total = (0.20 * lab_tot) + (0.30 * proj_tot) + (0.025 * checkpoint_tot) + (0.025 * disc_tot) + (0.15 * mid) + (
+                0.30 * fin)
+
+    return total
 
 
 # ---------------------------------------------------------------------
@@ -328,7 +447,7 @@ def short_answer():
     True
     """
 
-    return ...
+    return [0.0001, 0.85, [79,86], 0.06, True]
 
 # ---------------------------------------------------------------------
 # DO NOT TOUCH BELOW THIS LINE
