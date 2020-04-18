@@ -182,12 +182,12 @@ def process_labs(grades):
     """
 
     lab_names = get_assignment_names(grades)['lab']
-    labdf = grades[lab_names].fillna(0)
+    labdf = grades[lab_names]
 
     for l in lab_names:
         #print(labdf[l] / grades[f'{l} - Max Points'])
         #print(lateness_penalty(grades[f'{l} - Lateness (H:M:S)']))
-        labdf.loc[:,l] = (labdf[l] / grades[f'{l} - Max Points']) * lateness_penalty(grades[f'{l} - Lateness (H:M:S)'])
+        labdf.loc[:,l] = (labdf[l] * lateness_penalty(grades[f'{l} - Lateness (H:M:S)'])) / grades[f'{l} - Max Points']
 
     return labdf
 
@@ -211,7 +211,7 @@ def lab_total(processed):
     True
     """
 
-    tot = processed.sum(axis=1)/processed.shape[1]
+    tot = (processed.sum(axis=1) - processed.min(axis=1)) / (processed.shape[1] - 1)
     return tot
 
 
@@ -238,7 +238,7 @@ def total_points(grades):
     assgn_names = get_assignment_names(grades)
 
     proj_tot = projects_total(grades)
-    lab_tot = lab_total(process_labs(grades))
+    lab_tot = lab_total(process_labs(grades)).fillna(0)
 
     checkpoint_names = assgn_names['checkpoint']
     checkpoint_grades_sum = [float(0) for _ in range(grades.shape[0])]
@@ -379,7 +379,7 @@ def total_points_with_noise(grades):
     proj_tot = proj_grades_sum / len(proj_names)
 
     lab_names = get_assignment_names(grades)['lab']
-    labdf = grades[lab_names].fillna(0)
+    labdf = grades[lab_names]
 
     for l in lab_names:
         labdf.loc[:, l] = np.clip(\
@@ -388,7 +388,7 @@ def total_points_with_noise(grades):
                                 * lateness_penalty(grades[f'{l} - Lateness (H:M:S)'])\
                         ,0,1)
 
-    lab_tot = lab_total(labdf)
+    lab_tot = lab_total(labdf).fillna(0)
 
 
     checkpoint_names = assgn_names['checkpoint']
