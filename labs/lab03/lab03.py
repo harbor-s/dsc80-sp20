@@ -17,7 +17,7 @@ def car_null_hypoth():
     >>> set(car_null_hypoth()) <= set(range(1,11))
     True
     """
-    return ...
+    return [3,8]
 
 
 def car_alt_hypoth():
@@ -28,7 +28,7 @@ def car_alt_hypoth():
     >>> set(car_alt_hypoth()) <= set(range(1,11))
     True
     """
-    return ...
+    return [2,4]
 
 
 def car_test_stat():
@@ -39,7 +39,7 @@ def car_test_stat():
     >>> set(car_test_stat()) <= set(range(1,5))
     True
     """
-    return ...
+    return [2,4]
 
 
 def car_p_value():
@@ -50,12 +50,18 @@ def car_p_value():
     >>> car_p_value() in [1,2,3,4,5]
     True
     """
-    return ...
+    return 3
 
 
 # ---------------------------------------------------------------------
 # Question #2
 # ---------------------------------------------------------------------
+
+def convert_kbyte(str):
+    if str[-1] == 'k':
+        return float(str.strip('k'))
+    elif str[-1] == 'M':
+        return float(str.strip('M')) * 0.001
 
 def clean_apps(df):
     '''
@@ -67,8 +73,15 @@ def clean_apps(df):
     >>> cleaned.Reviews.dtype == int
     True
     '''
-    
-    return ...
+
+    cleaned = df.copy()
+    cleaned['Size'] = df['Size'].apply(convert_kbyte)
+    cleaned['Installs'] = df['Installs'].str.strip('+').str.replace(',','').astype(int)
+    cleaned['Type'] = df['Type'].replace({'Free': 1, 'Paid': 0})
+    cleaned['Price'] = df['Price'].str.strip('$').astype(np.float64)
+    cleaned['Last Updated'] = df['Last Updated'].str[-4:].astype(int)
+
+    return cleaned
 
 
 def store_info(cleaned):
@@ -83,8 +96,17 @@ def store_info(cleaned):
     True
     '''
 
+    count = cleaned.groupby('Last Updated').count()
+    years = count.loc[(count['App']) >= 100].index.values.tolist()
+    first = cleaned[cleaned['Last Updated'].isin(years)].groupby('Last Updated')['Installs'].median().idxmax()
 
-    return ...
+    second = cleaned.groupby('Content Rating')['Rating'].min().idxmax()
+
+    third = cleaned.groupby('Category')['Price'].mean().idxmax()
+
+    fourth = cleaned.loc[cleaned['Reviews'] >= 1000].groupby('Category')['Rating'].mean().idxmin()
+
+    return [first, second, third, fourth]
 
 # ---------------------------------------------------------------------
 # Question 3
@@ -102,7 +124,11 @@ def std_reviews_by_app_cat(cleaned):
     True
     """
 
-    return ...
+    df = pd.DataFrame()
+    df['Category'] = cleaned['Category']
+    df['Reviews'] = cleaned.groupby('Category')['Reviews'].transform(lambda x: (x - x.mean()) / x.std())
+
+    return df
 
 
 def su_and_spread():
@@ -122,7 +148,7 @@ def su_and_spread():
        'VIDEO_PLAYERS', 'NEWS_AND_MAGAZINES', 'MAPS_AND_NAVIGATION']
     True
     """
-    return ...
+    return ['equal', 'GAME']
 
 
 # ---------------------------------------------------------------------
@@ -148,7 +174,16 @@ def read_survey(dirname):
     FileNotFoundError: ... 'nonexistentfile'
     """
 
-    return ...
+    dfs = []
+
+    for filename in os.listdir(dirname):
+        if filename[:6] == 'survey':
+            df = pd.read_csv(os.path.join(dirname, filename))
+            df.columns = (df.columns.str.lower().str.replace('_', ' '))
+            dfs.append(df)
+
+    fin = pd.concat(dfs, sort=False)
+    return fin[['first name', 'last name', 'current company', 'job title', 'email', 'university']]
 
 
 def com_stats(df):
@@ -167,7 +202,13 @@ def com_stats(df):
     True
     """
 
-    return ...
+    df = df.loc[df['email'].str[-4:] == '.com'][['first name', 'job title', 'university', 'current company']]
+    results = []
+
+    for col in df:
+        results.append(df[col].mode().max())
+
+    return results
 
 
 # ---------------------------------------------------------------------
@@ -194,7 +235,14 @@ def combine_surveys(dirname):
     FileNotFoundError: ... 'nonexistentfile'
     """
 
-    return ...
+    dfs = []
+    for filename in os.listdir(dirname):
+        if (filename[:8] == 'favorite'):
+            df = pd.read_csv(os.path.join(dirname, filename))
+            df = df.set_index('id')
+            dfs.append(df)
+
+    return pd.concat(dfs, axis=1, sort=False)
 
 
 def check_credit(df):
@@ -212,7 +260,21 @@ def check_credit(df):
     (1000, 2)
     """
 
-    return ...
+    cdf = df.copy()
+    answers = df.drop('name', axis=1)
+    credit = answers.count(axis=1).apply(lambda x: 5 if (x > (0.75 * answers.shape[1])) else 0)
+    cdf['credit'] = credit
+
+    ninety = False
+
+    for col in answers:
+        if (answers[col].count() / answers.shape[0]) > 0.9:
+            ninety = True
+
+    if ninety == True:
+        cdf['credit'] = cdf['credit'] + 1
+
+    return cdf[['name', 'credit']]
 
 # ---------------------------------------------------------------------
 # Question # 6
@@ -232,7 +294,8 @@ def at_least_once(pets, procedure_history):
     >>> out < len(pets)
     True
     """
-    return ...
+    ids = procedure_history.groupby('PetID').count().index.values.tolist()
+    return pets.loc[pets['PetID'].isin(ids)].shape[0]
 
 
 def pet_name_by_owner(owners, pets):
