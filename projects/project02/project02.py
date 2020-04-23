@@ -64,7 +64,39 @@ def data_kinds():
     True
     """
 
-    return ...
+    dict = {'YEAR' : 'O',
+            'MONTH' : 'O',
+            'DAY' : 'O',
+            'DAY_OF_WEEK' : 'O',
+            'AIRLINE' : 'N',
+            'FLIGHT_NUMBER' : 'N', 
+            'TAIL_NUMBER' : 'N',
+            'ORIGIN_AIRPORT' : 'N',
+            'DESTINATION_AIRPORT' : 'N',
+            'SCHEDULED_DEPARTURE' : 'O',
+            'DEPARTURE_TIME' : 'O',
+            'DEPARTURE_DELAY' : 'Q',
+            'TAXI_OUT' : 'Q',
+            'WHEELS_OFF' : 'O',
+            'SCHEDULED_TIME' : 'O',
+            'ELAPSED_TIME' : 'Q',
+            'AIR_TIME' : 'Q',
+            'DISTANCE' : 'Q', 
+            'WHEELS_ON' : 'O',
+            'TAXI_IN' : 'Q',
+            'SCHEDULED_ARRIVAL' : 'O',
+            'ARRIVAL_TIME' : 'O',
+            'ARRIVAL_DELAY' : 'Q',
+            'DIVERTED' : 'N',
+            'CANCELLED' : 'N',
+            'CANCELLATION_REASON' : 'N',
+            'AIR_SYSTEM_DELAY' : 'Q',
+            'SECURITY_DELAY' : 'Q',
+            'AIRLINE_DELAY' : 'Q',
+            'LATE_AIRCRAFT_DELAY' : 'Q',
+            'WEATHER_DELAY' : 'Q'
+           }
+    return dict
 
 
 def data_types():
@@ -80,7 +112,39 @@ def data_types():
     True
     """
 
-    return ...
+    dict = {'YEAR' : 'int',
+            'MONTH' : 'int',
+            'DAY' : 'int',
+            'DAY_OF_WEEK' : 'int',
+            'AIRLINE' : 'str',
+            'FLIGHT_NUMBER' : 'int', 
+            'TAIL_NUMBER' : 'str',
+            'ORIGIN_AIRPORT' : 'str',
+            'DESTINATION_AIRPORT' : 'str',
+            'SCHEDULED_DEPARTURE' : 'int',
+            'DEPARTURE_TIME' : 'float',
+            'DEPARTURE_DELAY' : 'float',
+            'TAXI_OUT' : 'float',
+            'WHEELS_OFF' : 'float',
+            'SCHEDULED_TIME' : 'int',
+            'ELAPSED_TIME' : 'float',
+            'AIR_TIME' : 'float',
+            'DISTANCE' : 'int', 
+            'WHEELS_ON' : 'float',
+            'TAXI_IN' : 'float',
+            'SCHEDULED_ARRIVAL' : 'int',
+            'ARRIVAL_TIME' : 'float',
+            'ARRIVAL_DELAY' : 'float',
+            'DIVERTED' : 'int',
+            'CANCELLED' : 'int',
+            'CANCELLATION_REASON' : 'str',
+            'AIR_SYSTEM_DELAY' : 'float',
+            'SECURITY_DELAY' : 'float',
+            'AIRLINE_DELAY' : 'float',
+            'LATE_AIRCRAFT_DELAY' : 'float',
+            'WEATHER_DELAY' : 'float'
+           }
+    return dict
 
 
 # ---------------------------------------------------------------------
@@ -115,7 +179,19 @@ def basic_stats(flights):
     >>> out.columns.tolist() == cols
     True
     """
-    return ...
+    arrive = flights.where(flights['DESTINATION_AIRPORT'] == 'SAN')
+    depart = flights.where(flights['ORIGIN_AIRPORT'] == 'SAN')
+    a_top_months = arrive.groupby('MONTH').count().sort_values('YEAR').index.values[0:3]
+    d_top_months = depart.groupby('MONTH').count().sort_values('YEAR').index.values[0:3]
+    
+    d = {'count' : [arrive.shape[0], depart.shape[0]],
+         'mean_delay' : [arrive['ARRIVAL_DELAY'].mean(), depart['ARRIVAL_DELAY'].mean()],
+         'median_delay': [arrive['ARRIVAL_DELAY'].median(), depart['ARRIVAL_DELAY'].median()],
+         'airline': [arrive.loc[arrive['ARRIVAL_DELAY'].idxmax()]['AIRLINE'], depart.loc[depart['ARRIVAL_DELAY'].idxmax()]['AIRLINE']],
+         'top_months': [a_top_months, d_top_months]
+        }
+    
+    return pd.DataFrame(index=['ARRIVING','DEPARTING'],data=d)
 
 
 # ---------------------------------------------------------------------
@@ -147,7 +223,13 @@ def depart_arrive_stats(flights):
     True
     """
 
-    return ...
+    late1 = flights.where((flights['DEPARTURE_DELAY'] > 0) & (flights['ARRIVAL_DELAY'] <= 0))['FLIGHT_NUMBER'].count() / flights.shape[0]
+    late2 = flights.where((flights['DEPARTURE_DELAY'] <= 0) & (flights['ARRIVAL_DELAY'] > 0))['FLIGHT_NUMBER'].count() / flights.shape[0]
+    late3 = flights.where((flights['DEPARTURE_DELAY'] > 0) & (flights['ARRIVAL_DELAY'] > 0))['FLIGHT_NUMBER'].count() / flights.shape[0]
+    
+    late_series = pd.Series([late1,late2,late3], index=['late1','late2','late3'])
+    
+    return late_series
 
 
 def depart_arrive_stats_by_month(flights):
@@ -166,7 +248,13 @@ def depart_arrive_stats_by_month(flights):
     True
     """
 
-    return ...
+    late1 = (flights.where((flights['DEPARTURE_DELAY'] > 0) & (flights['ARRIVAL_DELAY'] <= 0)).groupby('MONTH').count()['FLIGHT_NUMBER']/flights.shape[0]).values
+    late2 = (flights.where((flights['DEPARTURE_DELAY'] <= 0) & (flights['ARRIVAL_DELAY'] > 0)).groupby('MONTH').count()['FLIGHT_NUMBER'] / flights.shape[0]).values
+    late3 = (flights.where((flights['DEPARTURE_DELAY'] > 0) & (flights['ARRIVAL_DELAY'] > 0)).groupby('MONTH').count()['FLIGHT_NUMBER'] / flights.shape[0]).values
+    
+    d = {'late1' : late1, 'late2' : late2, 'late3' : late3}
+    late_data = pd.DataFrame(data=d, index=flights.groupby('MONTH').count().index)
+    return late_data
 
 
 # ---------------------------------------------------------------------
@@ -191,7 +279,7 @@ def cnts_by_airline_dow(flights):
     True
     """
 
-    return ...
+    return flights.pivot_table(index='DAY_OF_WEEK',columns='AIRLINE', values='AIRLINE',aggfunc='count')
 
 
 def mean_by_airline_dow(flights):
@@ -211,7 +299,7 @@ def mean_by_airline_dow(flights):
     True
     """
 
-    return ...
+    return flights.pivot_table(index='DAY_OF_WEEK',columns='AIRLINE',values = 'ARRIVAL_DELAY',aggfunc='mean')
 
 
 # ---------------------------------------------------------------------
@@ -310,7 +398,7 @@ def missing_types():
     >>> out = missing_types()
     >>> isinstance(out, pd.Series)
     True
-    >>> set(out.unique()) - set(['MD', 'MCAR', 'MAR', 'NMAR', np.NaN]) == set()
+    >>> set(out.unique()) - set(['MD', 'MCAR', 'MAR', 'MNAR', np.NaN]) == set()
     True
     """
 
