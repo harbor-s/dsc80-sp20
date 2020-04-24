@@ -18,18 +18,13 @@ def get_san(infp, outfp):
     >>> infp = os.path.join('data', 'flights.test')
     >>> outfp = os.path.join('data', 'santest.tmp')
     >>> get_san(infp, outfp)
-    >>> ddf = pd.read_csv(outfp)
+    >>> df = pd.read_csv(outfp)
     >>> df.shape
     (53, 31)
     >>> os.remove(outfp)
     """
 
-    L = pd.read_csv(infp, index_col=0, chunksize=10000)
-    for df in L:
-        df_filtered = df.loc[(df['ORIGIN_AIRPORT'] == 'SAN') | (df['DESTINATION_AIRPORT'] == 'SAN')]
-        df_filtered.to_csv(outfp, mode='a')
-
-    return None
+    return ...
 
 
 def get_sw_jb(infp, outfp):
@@ -49,13 +44,7 @@ def get_sw_jb(infp, outfp):
     >>> os.remove(outfp)
     """
 
-    L = pd.read_csv(infp, index_col=0, chunksize=10000)
-    for df in L:
-        df_filtered = df.loc[(df['AIRLINE'] == 'B6') | (df['AIRLINE'] == 'WN')]
-        print('chunk')
-        df_filtered.to_csv(outfp, mode='a')
-
-    return None
+    return ...
 
 
 # ---------------------------------------------------------------------
