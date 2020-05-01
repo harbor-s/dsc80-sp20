@@ -23,7 +23,9 @@ def latest_login(login):
     True
     """
 
-    return ...
+    login_time = login.copy()
+    login_time['Time'] = pd.to_datetime(login['Time']).apply(lambda x: x.time())
+    return login_time.groupby('Login Id').max()
 
 # ---------------------------------------------------------------------
 # Question # 2
@@ -45,8 +47,15 @@ def smallest_ellapsed(login):
     True
     """
 
-    return ...
+    login_dt = login.copy()
+    login_dt['Time'] = pd.to_datetime(login_dt['Time'])
+    login_dt.sort_values('Login Id', ascending=False)
 
+    result = login_dt.groupby('Login Id')\
+        .apply(lambda x: x.diff().min())\
+        .dropna().drop('Login Id', axis=1)
+
+    return result
 
 # ---------------------------------------------------------------------
 # Question # 3
@@ -68,7 +77,10 @@ def total_seller(df):
 
     """
     
-    return ...
+    return df.pivot_table(
+        index = 'Name',
+        aggfunc = 'sum'
+    )
 
 
 def product_name(df):
@@ -84,7 +96,11 @@ def product_name(df):
     0
     """
     
-    return ...
+    return df.pivot_table(
+        index = 'Product',
+        columns = 'Name',
+        aggfunc = 'sum'
+    )
 
 def count_product(df):
     """
@@ -99,7 +115,12 @@ def count_product(df):
     70
     """
     
-    return ...
+    return df.pivot_table(
+        index = ['Product','Name'],
+        columns = 'Date',
+        aggfunc = 'count',
+        fill_value = 0
+    )
 
 
 def total_by_month(df):
@@ -115,7 +136,15 @@ def total_by_month(df):
     5
     """
     
-    return ...
+    df_Month = df.copy()
+    df_Month['Month'] = pd.to_datetime(df['Date']).apply(lambda x: x.strftime('%B'))
+
+    return df_Month.pivot_table(
+        index = ['Name','Product'],
+        columns = 'Month',
+        aggfunc = 'sum',
+        fill_value = 0
+    )
 
 # ---------------------------------------------------------------------
 # Question # 4
@@ -137,7 +166,8 @@ def diff_of_means(data, col='orange'):
     True
     """
     
-    return ...
+    means = data.groupby('Factory')[col].mean()
+    return abs(means[0] - means[1])
 
 
 def simulate_null(data, col='orange'):
@@ -157,7 +187,10 @@ def simulate_null(data, col='orange'):
     True
     """
     
-    return ...
+    mean_w = data[col].sample(220).mean()
+    mean_y = data[col].sample(248).mean()
+
+    return abs(mean_w - mean_y)
 
 
 def pval_orange(data, col='orange'):
@@ -177,7 +210,12 @@ def pval_orange(data, col='orange'):
     True
     """
     
-    return ...
+    results = []
+    for _ in range(1000):
+        results.append(simulate_null(data,col))
+
+    results = np.array(results)
+    return np.count_nonzero(results >= diff_of_means(data,col)) / len(results)
 
 
 # ---------------------------------------------------------------------
@@ -203,7 +241,7 @@ def ordered_colors():
     True
     """
 
-    return ...
+    return [('yellow', 0.0), ('orange', 0.008), ('red', 0.083), ('green', 0.303), ('purple', 0.966)]
     
 
 # ---------------------------------------------------------------------
@@ -223,7 +261,7 @@ def same_color_distribution():
     True
     """
     
-    return ...
+    return (0.007, 'Reject')
 
 # ---------------------------------------------------------------------
 # Question # 7
@@ -241,7 +279,7 @@ def perm_vs_hyp():
     True
     """
 
-    return ...
+    return ['P', 'P', 'H', 'H', 'P']
 
 
 # ---------------------------------------------------------------------
@@ -260,7 +298,7 @@ def after_purchase():
     True
     """
 
-    return ...
+    return ['MCAR', 'MD', 'NI', 'MAR', 'MAR']
 
 # ---------------------------------------------------------------------
 # Question # 9
@@ -281,7 +319,7 @@ def multiple_choice():
     True
     """
 
-    return ...
+    return ['MD', 'MCAR', 'MD', 'NI', 'MCAR']
 
 # ---------------------------------------------------------------------
 # DO NOT TOUCH BELOW THIS LINE
