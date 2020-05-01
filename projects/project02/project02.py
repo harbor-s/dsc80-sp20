@@ -18,7 +18,7 @@ def get_san(infp, outfp):
     >>> infp = os.path.join('data', 'flights.test')
     >>> outfp = os.path.join('data', 'santest.tmp')
     >>> get_san(infp, outfp)
-    >>> ddf = pd.read_csv(outfp)
+    >>> df = pd.read_csv(outfp)
     >>> df.shape
     (53, 31)
     >>> os.remove(outfp)
@@ -52,7 +52,6 @@ def get_sw_jb(infp, outfp):
     L = pd.read_csv(infp, index_col=0, chunksize=10000)
     for df in L:
         df_filtered = df.loc[(df['AIRLINE'] == 'B6') | (df['AIRLINE'] == 'WN')]
-        print('chunk')
         df_filtered.to_csv(outfp, mode='a')
 
     return None
@@ -190,8 +189,8 @@ def basic_stats(flights):
     >>> out.columns.tolist() == cols
     True
     """
-    arrive = flights.where(flights['DESTINATION_AIRPORT'] == 'SAN')
-    depart = flights.where(flights['ORIGIN_AIRPORT'] == 'SAN')
+    arrive = flights.loc[flights['DESTINATION_AIRPORT'] == 'SAN']
+    depart = flights.loc[flights['ORIGIN_AIRPORT'] == 'SAN']
     a_top_months = arrive.groupby('MONTH').count().sort_values('YEAR').index.values[0:3]
     d_top_months = depart.groupby('MONTH').count().sort_values('YEAR').index.values[0:3]
     
@@ -290,7 +289,10 @@ def cnts_by_airline_dow(flights):
     True
     """
 
-    return flights.pivot_table(index='DAY_OF_WEEK',columns='AIRLINE', values='AIRLINE',aggfunc='count')
+    return flights.pivot_table(index='DAY_OF_WEEK',\
+                            columns='AIRLINE',\
+                            values='MONTH',\
+                            aggfunc='count')
 
 
 def mean_by_airline_dow(flights):
@@ -310,7 +312,10 @@ def mean_by_airline_dow(flights):
     True
     """
 
-    return flights.pivot_table(index='DAY_OF_WEEK',columns='AIRLINE',values = 'ARRIVAL_DELAY',aggfunc='mean')
+    return flights.pivot_table(index='DAY_OF_WEEK',\
+                                columns='AIRLINE',\
+                                values = 'ARRIVAL_DELAY',\
+                                aggfunc='mean')
 
 
 # ---------------------------------------------------------------------
@@ -332,7 +337,11 @@ def predict_null_arrival_delay(row):
     >>> set(out.unique()) - set([True, False]) == set()
     True
     """
-    return ...
+
+    if (row['DIVERTED'] == 1) or (row['CANCELLED'] == 1):
+         return True
+    return False
+    
 
 
 def predict_null_airline_delay(row):
@@ -353,7 +362,9 @@ def predict_null_airline_delay(row):
     True
     """
 
-    return ...
+    if row['ARRIVAL_DELAY'] >= 15:
+        return False
+    return True
 
 
 # ---------------------------------------------------------------------
@@ -374,8 +385,26 @@ def perm4missing(flights, col, N):
     True
     """
 
-    return ...
+    tf_df = flights.loc[:,[col]].assign(**{'delays': flights['DEPARTURE_DELAY'].isna()})
+    tf_df = tf_df.fillna('na')
+    obs_stat = tvd_tf_delays(tf_df,col)
 
+    results = []
+    for _ in range(N):
+        shuffled = shuffle(tf_df,'delays')
+        results.append(tvd_tf_delays(shuffled,col))
+    return (pd.Series(results) >= obs_stat).sum() / N
+
+
+def tvd_tf_delays(df,col):
+    pivoted = df.pivot_table(index=col,columns='delays',aggfunc='size')
+    props = pivoted.apply(lambda x: x/x.sum())
+    return np.sum(np.abs(props[False]-props[True]))
+
+def shuffle(df, col):
+    shuffled = df[col].sample(replace=False, frac=1).reset_index(drop=True)
+    result = df.assign(**{col:shuffled})
+    return result
 
 def dependent_cols():
     """
@@ -391,7 +420,7 @@ def dependent_cols():
     True
     """
 
-    return ...
+    return ['DAY_OF_WEEK','AIRLINE','CANCELLATION_REASON']
 
 
 def missing_types():
@@ -413,7 +442,7 @@ def missing_types():
     True
     """
 
-    return ...
+    return pd.Series(data=['MAR','MD','MCAR','MD'], index=['CANCELLED', 'CANCELLATION_REASON', 'TAIL_NUMBER', 'ARRIVAL_TIME'])
 
 
 # ---------------------------------------------------------------------
@@ -441,7 +470,11 @@ def prop_delayed_by_airline(jb_sw):
     True
     """
 
-    return ...
+    df = jb_sw.copy()
+    df['delayed']= jb_sw['DEPARTURE_DELAY'].apply(lambda x: 1 if x>0 else 0)
+    df['delayed'] = df['delayed']-df['CANCELLED']
+    df['delayed'] = df['delayed'].apply(lambda x: 0 if x==-1 else x)
+    return df.groupby('AIRLINE')['delayed'].mean().to_frame()
 
 
 def prop_delayed_by_airline_airport(jb_sw):
@@ -466,7 +499,11 @@ def prop_delayed_by_airline_airport(jb_sw):
     True
     """
 
-    return ...
+    df = jb_sw.copy()
+    df['delayed']= jb_sw['DEPARTURE_DELAY'].apply(lambda x: 1 if x>0 else 0)
+    df['delayed'] = df['delayed']-df['CANCELLED']
+    df['delayed'] = df['delayed'].apply(lambda x: 0 if x==-1 else x)
+    return df.pivot_table(index='AIRLINE',columns='ORIGIN_AIRPORT',aggfunc='mean', values='delayed')
 
 
 # ---------------------------------------------------------------------
@@ -493,7 +530,19 @@ def verify_simpson(df, group1, group2, occur):
     False
     """
 
-    return ...
+    df1 = df.copy()
+    df1 = df1.groupby(group1, as_index=False).mean()
+    greater = df1[occur].idxmax()
+    lesser = df1[occur].idxmin()
+
+    df2 = df.pivot_table(index=group1,columns=group2,aggfunc='mean', values=occur)
+    
+    for col in df2:
+        if df2[col][greater] > df2[col][lesser]:
+            return False
+
+
+    return True
 
 
 # ---------------------------------------------------------------------
