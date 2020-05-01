@@ -16,7 +16,7 @@ def impute_with_index(dg):
     True
     """
 
-    return ...
+    return dg['B'].fillna(pd.Series(dg.index,index=dg.index))
 
 
 def impute_with_digit(dg):
@@ -33,4 +33,7 @@ def impute_with_digit(dg):
     True
     """
 
-    return ...
+    df = dg.copy()
+    for col in df:
+        df[col]=df[col].fillna(df['A'] % 10)
+    return df
