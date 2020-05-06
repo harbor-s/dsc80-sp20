@@ -2,6 +2,8 @@ import os
 import pandas as pd
 import numpy as np
 
+from scipy.stats import ks_2samp
+
 
 # ---------------------------------------------------------------------
 # Question # 1
@@ -18,7 +20,7 @@ def first_round():
     >>> out[1] is "NR" or out[1] is "R"
     True
     """
-    return ...
+    return [0.093, 'NR']
 
 
 def second_round():
@@ -34,7 +36,7 @@ def second_round():
     >>> out[2] is "ND" or out[2] is "D"
     True
     """
-    return ...
+    return [0.021, 'R', 'D']
 
 
 # ---------------------------------------------------------------------
@@ -55,7 +57,26 @@ def verify_child(heights):
     True
     """
 
-    return ...
+    data = heights.drop(columns = ['child','father'])
+    p_vals = []
+    
+    for col in data:
+        df = heights[['father']].assign(missing=data[col].isnull())
+        groups = df.groupby('missing')['father']
+        obs = ks_2samp(groups.get_group(True), groups.get_group(False)).statistic
+    
+        results = []
+        for _ in range(100):
+            shuffled = df.missing.sample(replace=False, frac=1).reset_index(drop=True)
+            shuff_df = df.assign(shuffled=shuffled)
+
+            groups = shuff_df.groupby('shuffled')['father']
+            ks = ks_2samp(groups.get_group(True), groups.get_group(False)).statistic
+            results.append(ks)
+        
+        p_vals.append(np.mean(pd.Series(results) > obs))
+    
+    return pd.Series(p_vals, index=data.columns)
 
 
 def missing_data_amounts():
@@ -67,7 +88,7 @@ def missing_data_amounts():
     True
     """
 
-    return ...
+    return [1,5]
 
 
 # ---------------------------------------------------------------------
@@ -92,7 +113,9 @@ def cond_single_imputation(new_heights):
     True
     """
 
-    return ...
+    df = new_heights.fillna(new_heights.groupby(pd.qcut(new_heights['father'],4)).transform(lambda x: x.mean()))
+    return df['child']
+
 
 # ---------------------------------------------------------------------
 # Question # 4
@@ -117,7 +140,14 @@ def quantitative_distribution(child, N):
     True
     """
 
-    return ...
+    dist, bins = np.histogram(child.dropna(), 10)
+    results = []
+
+    for _ in range(N):
+        b = np.random.choice(range(10), p=dist/sum(dist))
+        results.append(np.random.uniform(bins[b], bins[b+1]))
+    
+    return pd.Series(results)
 
 
 def impute_height_quant(child):
@@ -137,7 +167,7 @@ def impute_height_quant(child):
     True
     """
 
-    return ...
+    return child.fillna(quantitative_distribution(child, child.shape[0]))
 
 
 # ---------------------------------------------------------------------
@@ -155,7 +185,7 @@ def answers():
     >>> len(list2)
     6
     """
-    return ...
+    return [1,2,1,1],['tumblr.com','google.com','reddit.com','twitter.com','netflix.com','facebook.com']
 
 
 
