@@ -185,7 +185,7 @@ def answers():
     >>> len(list2)
     6
     """
-    return [1,2,1,1],['tumblr.com','google.com','reddit.com','twitter.com','netflix.com','facebook.com']
+    return [1,2,1,1],['tumblr.com','fc2.com','360.cn','twitter.com','netflix.com','facebook.com']
 
 
 
