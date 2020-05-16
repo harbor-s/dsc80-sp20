@@ -12,7 +12,7 @@ def url_list():
     True
     """
 
-    return [f'http://example.webscraping.com/places/default/index/{x}' for x in range(0,7)]
+    return [f'http://example.webscraping.com/places/default/index/{x}' for x in range(0,26)]
 
 
 def request_until_successful(url, N):
@@ -29,7 +29,7 @@ def request_until_successful(url, N):
     True
     """
 
-    for _ in range N:
+    for _ in range(N):
         resp = requests.get(url)
         if resp.status_code == 200:
             return resp
