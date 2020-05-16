@@ -94,7 +94,12 @@ def stock_history(ticker, year, month):
     >>> history.label.iloc[0]
     'June 03, 19'
     """
-    return ...
+    stock_endpoint = 'https://financialmodelingprep.com/api/v3/historical-price-full/{}'
+    year = str(year)
+    month = str(month)
+    string = f"{ticker}?from={year}-{month}-01&to={year}-{month}-31"
+    print(requests.get(stock_endpoint.format(string)))
+    return pd.DataFrame(data = json.loads(requests.get(stock_endpoint.format(f"{ticker}?from={year}-{month}-01&to={year}-{month}-31")).text))
 
 
 def stock_stats(history):
