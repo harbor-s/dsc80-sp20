@@ -40,7 +40,7 @@ def match_1(string):
     True
     """
     #Your Code Here
-    pattern = ...
+    pattern = '^..\[..\]'
 
     #Do not edit following code
     prog = re.compile(pattern)
@@ -72,7 +72,7 @@ def match_2(string):
     False
     """
     #Your Code Here
-    pattern = ...
+    pattern = '^\(858\) \d{3}-\d{4}$'
 
     #Do not edit following code
     prog = re.compile(pattern)
@@ -106,7 +106,7 @@ def match_3(string):
     """
     #Your Code Here
 
-    pattern = ...
+    pattern = '^[\w \?]{5,9}\?$'
 
     #Do not edit following code
     prog = re.compile(pattern)
@@ -142,7 +142,7 @@ def match_4(string):
     False
     """
     #Your Code Here
-    pattern = ...
+    pattern = '^\$[^a-c\$]*\$[aA]+[bB]+[cC]+$'
 
     #Do not edit following code
     prog = re.compile(pattern)
@@ -165,7 +165,7 @@ def match_5(string):
     """
 
     #Your Code Here
-    pattern = ...
+    pattern = '^\w+\.py$'
 
     #Do not edit following code
     prog = re.compile(pattern)
@@ -188,7 +188,7 @@ def match_6(string):
     """
 
     #Your Code Here
-    pattern = ...
+    pattern = '^[a-z]+_[a-z]+$'
 
     #Do not edit following code
     prog = re.compile(pattern)
@@ -209,7 +209,7 @@ def match_7(string):
     False
     """
 
-    pattern = ...
+    pattern = '^_.*_$'
 
     #Do not edit following code
     prog = re.compile(pattern)
@@ -239,7 +239,7 @@ def match_8(string):
     True
     """
 
-    pattern = ...
+    pattern = '^[^O1i]*$'
 
     #Do not edit following code
     prog = re.compile(pattern)
@@ -260,7 +260,7 @@ def match_9(string):
     '''
 
 
-    pattern = ...
+    pattern = '(CA-\d{2}-(LAX|SAN)-\d{4})|(NY-\d{2}-[A-Z]{3}-\d{4})'
 
     #Do not edit following code
     prog = re.compile(pattern)
@@ -288,7 +288,10 @@ def match_10(string):
 
     '''
 
-    return ...
+    s = string.lower()
+    s = re.sub('[aA].{2}', '', s)
+    s = re.sub('[^A-Za-z\d]+', '', s)
+    return [s[i:i+3] for i in range(0, len(s), 3)]
 
 
 
@@ -312,7 +315,12 @@ def extract_personal(s):
     True
     """
 
-    return ...
+    emails = re.findall('([A-Za-z0-9]+@[A-Za-z0-9]+\.[A-Za-z0-9]+\.[A-Za-z0-9]+)|([A-Za-z0-9]+@[A-Za-z0-9]+\.[A-Za-z0-9]+)',s)
+    emails = [x[0] if (len(x[0]) > 0) else x[1] for x in emails]
+    ssns = re.findall('\d{3}-\d{2}-\d{4}',s)
+    bitcoins = re.findall('(?<=bitcoin:)[A-Za-z0-9]{20}[A-Za-z0-9]*',s)
+    addresses = re.findall('\d+ [A-Z][a-z]+ [A-Z][a-z]+',s)
+    return (emails,ssns,bitcoins,addresses)
 
 # ---------------------------------------------------------------------
 # Question # 3
@@ -330,8 +338,13 @@ def tfidf_data(review, reviews):
     >>> 'before' in out.index
     True
     """
-    return ...
-
+    words = pd.Series(filter(None, review.split(' ')))
+    df = pd.DataFrame([], index=set(words.tolist()))
+    df = df.assign(cnt=[(' '+review+' ').count(' '+word+' ') for word in df.index])
+    df = df.assign(tf=df.cnt/len(words))
+    df = df.assign(idf=[np.log(len(reviews) / reviews.str.contains(word).sum()) for word in df.index])
+    df = df.assign(tfidf = df.tf * df.idf)
+    return df
 
 def relevant_word(out):
     """
@@ -343,7 +356,7 @@ def relevant_word(out):
     >>> relevant_word(out) in out.index
     True
     """
-    return ...
+    return out['tfidf'].idxmax()
 
 
 # ---------------------------------------------------------------------
@@ -360,7 +373,7 @@ def hashtag_list(tweet_text):
     True
     """
 
-    return ...
+    return pd.Series([re.findall('(?<=#)[^\s]*',tweet_text[x]) for x in tweet_text.index])
 
 
 def most_common_hashtag(tweet_lists):
@@ -372,7 +385,22 @@ def most_common_hashtag(tweet_lists):
     'NLP1'
     """
 
-    return ...
+    flat = []
+    for t in tweet_lists:
+        for i in t:
+            flat.append(i)
+    most_common = max(set(flat), key=flat.count)
+
+    l = []
+    for t in tweet_lists:
+        if len(t) == 1:
+            l.append(t[0])
+        if len(t) == 0:
+            l.append(np.NaN)
+        else:
+            l.append(most_common)
+
+    return pd.Series(l)
 
 
 # ---------------------------------------------------------------------
@@ -380,6 +408,17 @@ def most_common_hashtag(tweet_lists):
 # ---------------------------------------------------------------------
 
 
+def clean_text(ira):
+    t = [re.sub('[ ]*#[^\s]*','',x) for x in ira['text']]
+    t = [re.sub('[ ]*http[s]*://[^\s]*','',x) for x in t]
+    t = [re.sub('[ ]*@[^\s]*','',x) for x in t]
+    t = [re.sub('[ ]*RT[ ]*','',x) for x in t]
+    t = [re.sub('-', ' ', x) for x in t]
+    t = [re.sub('[^A-Za-z0-9 ]','',x) for x in t]
+    t = [re.sub('[ ]+',' ',x) for x in t]
+    t = [x.lower() for x in t]
+    return pd.Series(t)
+    
 def create_features(ira):
     """
     :Example:
@@ -393,7 +432,14 @@ def create_features(ira):
     True
     """
 
-    return ...
+    df = pd.DataFrame([], index=ira.index)
+    df = df.assign(text = clean_text(ira))
+    df = df.assign(num_hashtags = [len(l) for l in hashtag_list(ira['text'])])
+    df = df.assign(mc_hashtags = most_common_hashtag(hashtag_list(ira['text'])))
+    df = df.assign(num_tags = [len(t) for t in [re.findall('@',x) for x in ira['text']]])
+    df = df.assign(num_links = [len(l) for l in[re.findall('http[s]*://[^\s]*',x) for x in ira['text']]])
+    df = df.assign(is_retweet = [re.search('RT',x) is not None for x in ira['text']])
+    return df
 
 # ---------------------------------------------------------------------
 # DO NOT TOUCH BELOW THIS LINE
