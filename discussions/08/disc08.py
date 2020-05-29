@@ -17,7 +17,18 @@ def rmse(datasets):
     True
     """
 
-    return ...
+    rmse = []
+    for k,v in datasets.items():
+        reg = linregress(v.X,v.Y)
+        pred = []
+        
+        for i in range(v.shape[0]):
+            pred.append((v.loc[i].X*reg.slope)+reg.intercept)
+        pred = pd.Series(pred)
+        
+        rmse.append(np.sqrt(np.mean((pred-v.Y)**2)))
+        
+    return pd.Series(rmse)
 
 
 def heteroskedasticity(datasets):
@@ -33,4 +44,4 @@ def heteroskedasticity(datasets):
     True
     """
 
-    return ...
+    return [False if linregress(v.X,v.Y).pvalue > 0.05 else True for k,v in datasets.items()]

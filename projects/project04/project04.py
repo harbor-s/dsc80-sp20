@@ -31,7 +31,12 @@ def get_book(url):
     True
     """
     
-    return ...
+    text = requests.get(url).text
+    start_comment = re.search('\*\*\* START OF THIS PROJECT GUTENBERG EBOOK.*\*\*\*',text)
+    end_comment = re.search('\*\*\* END OF THIS PROJECT GUTENBERG EBOOK.*\*\*\*',text)
+    text = text[start_comment.end():end_comment.start()]
+    text = re.sub('\\r\n','\n',text)
+    return text
     
 # ---------------------------------------------------------------------
 # Question #2
@@ -64,7 +69,17 @@ def tokenize(book_string):
     True
     """
 
-    return ...
+    string = re.sub('\n\n+','\x03 \x02',book_string)
+    t = [x[0] if x[0]!='' else x[1] for x in re.findall(r'(\b\w*\b)|([^\s])',string)]
+    if t[0] == '\x03':
+        t = t[1:]
+    if t[0] != '\x02':
+        t.insert(0,'\x02')
+    if t[-1] == '\x02':
+        t = t[:-1]
+    if t[-1] != '\x03':
+        t.append('\x03') 
+    return [x for x in t if x != '']
     
 # ---------------------------------------------------------------------
 # Question #3
@@ -103,7 +118,7 @@ class UniformLM(object):
         True
         """
 
-        return ...
+        return pd.Series(1/len(set(tokens)), index=list(set(tokens)))
     
     def probability(self, words):
         """
@@ -122,7 +137,12 @@ class UniformLM(object):
         True
         """
 
-        return ...
+        prob = 1
+        for i in range(len(words)):
+            if words[i] not in self.mdl.index:
+                return 0
+            prob = prob * self.mdl[words[i]]
+        return prob
         
     def sample(self, M):
         """
@@ -142,7 +162,7 @@ class UniformLM(object):
         True
         """
 
-        return ...
+        return ' '.join(self.mdl.sample(1000, replace=True).index)
 
             
 # ---------------------------------------------------------------------
@@ -179,7 +199,7 @@ class UnigramLM(object):
         True
         """
 
-        return ...
+        return pd.Series(tokens).value_counts()/len(tokens)
     
     def probability(self, words):
         """
@@ -199,7 +219,12 @@ class UnigramLM(object):
         True
         """
 
-        return ...
+        prob = 1
+        for word in words:
+            if word not in self.mdl.index:
+                return 0
+            prob = prob * self.mdl[word]
+        return prob
         
     def sample(self, M):
         """
@@ -218,7 +243,7 @@ class UnigramLM(object):
         True
         """
 
-        return ...
+        return ' '.join(self.mdl.sample(M, replace=True, weights = self.mdl).index)
         
     
 # ---------------------------------------------------------------------
@@ -267,7 +292,7 @@ class NGramLM(object):
         ('two', 'three')
         """
         
-        return ...
+        return [tuple(tokens[i:i+self.N]) for i in range(len(tokens) - (self.N - 1))]
         
     def train(self, ngrams):
         """
@@ -287,18 +312,24 @@ class NGramLM(object):
         """
 
         # ngram counts C(w_1, ..., w_n)
-        ...
-        # n-1 gram counts C(w_1, ..., w_(n-1))
-        ...
-
-        # Create the conditional probabilities
-        ...
+        ng = pd.DataFrame()
+        ng['ngram'] = self.ngrams
+        ng_counts = pd.DataFrame()
+        ng_counts['ngram_counts'] = ng['ngram'].value_counts()
         
-        # Put it all together
-
-        ...
-
-        return ...
+        ngrams = ng.merge(ng_counts, left_on='ngram', right_index=True)
+        
+        ngrams['n1gram'] = ngrams['ngram'].apply(lambda x: x[:(self.N - 1)])
+        ng1_counts = pd.DataFrame()
+        ng1_counts['n1gram_counts'] = ngrams['n1gram'].value_counts()
+        
+        ngrams = ngrams.merge(ng1_counts, left_on='n1gram', right_index=True)
+        
+        ngrams['prob'] = ngrams['ngram_counts']/ngrams['n1gram_counts']
+        
+        final_ngrams = ngrams.drop(columns = ['ngram_counts', 'n1gram_counts'])
+        
+        return final_ngrams
     
     def probability(self, words):
         """
