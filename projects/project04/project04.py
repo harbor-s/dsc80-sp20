@@ -311,11 +311,14 @@ class NGramLM(object):
         True
         """
 
-        # ngram counts C(w_1, ..., w_n)
+        if len(self.ngrams) == 0:
+            return None
         ng = pd.DataFrame()
         ng['ngram'] = self.ngrams
+        #print(self.ngrams)
         ng_counts = pd.DataFrame()
         ng_counts['ngram_counts'] = ng['ngram'].value_counts()
+        #print(ng['ngram'].value_counts().index)
         
         ngrams = ng.merge(ng_counts, left_on='ngram', right_index=True)
         
@@ -349,7 +352,32 @@ class NGramLM(object):
         True
         """
 
-        return ...
+        prob = 1
+        gram_num = self.N
+        current_mdl = self
+        
+        for ngram in self.create_ngrams(words):
+            ngram_exists = ngram in list(self.mdl['ngram'])
+            if ngram_exists:
+                prob *= self.mdl[self.mdl['ngram'] == ngram]['prob'].values[0]
+            else:
+                return 0
+        
+        gram_num -= 1
+        
+        while gram_num > 0:
+            current_mdl = current_mdl.prev_mdl
+            gram_num -= 1
+            
+            if gram_num != 0:
+                tup = current_mdl.create_ngrams(words)[0]
+                prob *= current_mdl.mdl[current_mdl.mdl['ngram'] == tup]['prob'].values[0]
+            
+            else:
+                prob *= current_mdl.mdl.loc[words[0]]
+        
+        return prob
+    
 
     def sample(self, M):
         """
@@ -369,12 +397,21 @@ class NGramLM(object):
         """
 
         # Use a helper function to generate sample tokens of length `length`
-        ...
+        def sample_token_generator(length):
+            df = self.mdl
+            val = '\x02'
+            words = []
+            for _ in range(length):
+                word = df[df.n1gram == (val,)].ngram.sample(weights = df.prob)
+                word = word.reset_index(drop = True)
+                words.append(word[0][1])
+                val = word[0][1]
+            return words
+        
         
         # Transform the tokens to strings
-        ...
 
-        return ...
+        return ' '.join(sample_token_generator(M))
 
 
 # ---------------------------------------------------------------------
