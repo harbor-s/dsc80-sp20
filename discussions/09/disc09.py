@@ -17,7 +17,7 @@ class LowStdColumnDropper(BaseEstimator, TransformerMixin):
         ...
         """
 
-        self.columns_ = X.columns[X.std() < self.thresh]
+        self.columns_ = X.columns[X.std() > self.thresh]
         
         return self
 

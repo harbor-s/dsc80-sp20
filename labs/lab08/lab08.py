@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import seaborn as sns
+import itertools as iter
 
 from sklearn.preprocessing import Binarizer, QuantileTransformer, FunctionTransformer
 
@@ -21,12 +22,16 @@ def best_transformation():
     # take log and square root of the dataset
     # look at the fit of the regression line (and R^2)
 
-    return ...
+    return 1
 
 # ---------------------------------------------------------------------
 # Question # 2
 # ---------------------------------------------------------------------
 
+
+def create_ordinal_col(col,key):
+    ord_col = col.apply(lambda x: key.index(x)).values
+    return ord_col
 
 def create_ordinal(df):
     """
@@ -43,12 +48,22 @@ def create_ordinal(df):
     True
     """
     
-    return ...
+    ord_df_dict = { 'ordinal_cut' : create_ordinal_col(df.cut, ['Fair','Good','Very Good','Premium','Ideal']),
+    'ordinal_color' : create_ordinal_col(df.color, ['J','I','H','G','F','E','D']),
+    'ordinal_clarity' : create_ordinal_col(df.clarity, ['I1','SI2','SI1','VS2','VS1','VVS2','VVS1','IF'])}
+
+    return pd.DataFrame(ord_df_dict)
 
 # ---------------------------------------------------------------------
 # Question # 3
 # ---------------------------------------------------------------------
 
+
+def one_hot_cols(colname,col,vals):
+    d = dict()
+    for val in vals:
+        d.update({f'one_hot_{colname}_{val}':[1 if x == val else 0 for x in col.values.tolist()]})
+    return d
 
 def create_one_hot(df):
     """
@@ -68,8 +83,18 @@ def create_one_hot(df):
     True
     """
     
-    return ...
+    one_hot_dict = dict()
 
+    one_hot_dict.update(one_hot_cols('cut', df.cut, ['Fair','Good','Very Good','Premium','Ideal']))
+    one_hot_dict.update(one_hot_cols('color', df.color, ['J','I','H','G','F','E','D']))
+    one_hot_dict.update(one_hot_cols('clarity', df.clarity, ['I1','SI2','SI1','VS2','VS1','VVS2','VVS1','IF']))
+    
+    return pd.DataFrame(one_hot_dict)
+
+
+def create_prop_col(col,vals):
+    key = dict(zip(vals,[col[col==val].shape[0]/col.shape[0] for val in vals]))
+    return col.replace(key)
 
 def create_proportions(df):
     """
@@ -88,7 +113,11 @@ def create_proportions(df):
     True
     """
 
-    return ...
+    prop_df_dict = { 'proportion_cut' : create_prop_col(df.cut, ['Fair','Good','Very Good','Premium','Ideal']),
+    'proportion_color' : create_prop_col(df.color, ['J','I','H','G','F','E','D']),
+    'proportion_clarity' : create_prop_col(df.clarity, ['I1','SI2','SI1','VS2','VS1','VVS2','VVS1','IF'])}
+
+    return pd.DataFrame(prop_df_dict)
 
 # ---------------------------------------------------------------------
 # Question # 4
@@ -113,7 +142,11 @@ def create_quadratics(df):
     True
     """
         
-    return ...
+    quad_df = pd.DataFrame()
+    cols = ['carat', 'depth', 'table', 'x', 'y', 'z']
+    for pair in list(iter.combinations(cols,r=2)):
+        quad_df[f'{pair[0]} * {pair[1]}'] = df[pair[0]] * df[pair[1]]
+    return quad_df
 
 
 # ---------------------------------------------------------------------
@@ -139,7 +172,7 @@ def comparing_performance():
 
     # create a model per variable => (variable, R^2, RMSE) table
 
-    return ...
+    return [0.8493, 1548.533193, 'x', 'carat * x', 'color', 0.013]
 
 # ---------------------------------------------------------------------
 # Question # 6, 7, 8
@@ -168,7 +201,7 @@ class TransformDiamonds(object):
         True
         """
 
-        return ...
+        return Binarizer(threshold = 1).transform(self.data[['carat']])
     
     def transform_to_quantile(self, data):
         """
@@ -188,7 +221,7 @@ class TransformDiamonds(object):
         True
         """
 
-        return ...
+        return QuantileTransformer().fit(self.data[['carat']]).transform(self.data[['carat']])
     
     def transform_to_depth_pct(self, data):
         """
@@ -206,7 +239,13 @@ class TransformDiamonds(object):
         True
         """
 
-        return ...
+        def get_depth_pct(l):
+            x = l[0]
+            y = l[1]
+            z = l[2]
+            return ((z/((x+y)/2)) * 100)
+
+        return FunctionTransformer(func=get_depth_pct).transform(np.array([data.x,data.y,data.z]))
 
 
 # ---------------------------------------------------------------------
