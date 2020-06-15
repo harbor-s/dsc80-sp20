@@ -41,7 +41,15 @@ def simple_pipeline(data):
     True
     '''
     
-    return ...
+    pl = Pipeline([
+        ('ft', FunctionTransformer(np.log)),
+        ('lr', LinearRegression())
+    ])
+
+    pl.fit(data[['c2']], data[['y']])
+    predictions = [x[0] for x in pl.predict(data[['c2']])]
+    
+    return (pl, np.array(predictions))
 
 # ---------------------------------------------------------------------
 # Question # 2
@@ -67,7 +75,19 @@ def multi_type_pipeline(data):
     True
     '''
 
-    return ...
+    ct = ColumnTransformer([
+        ('asis', FunctionTransformer(lambda x: x), ['c1']),
+        ('log', FunctionTransformer(np.log), ['c2']),
+        ('1hot', OneHotEncoder(sparse=False), ['group'])
+    ])
+    pl = Pipeline([
+        ('colt', ct),
+        ('lr', LinearRegression())
+    ])
+
+    pl.fit(data[['c1','c2','group']], data[['y']])
+    predictions = [x[0] for x in pl.predict(data[['c1','c2','group']])]
+    return (pl, np.array(predictions))
 
 # ---------------------------------------------------------------------
 # Question # 3
@@ -94,7 +114,13 @@ class StdScalerByGroup(BaseEstimator, TransformerMixin):
         df = pd.DataFrame(X)
         
         # A dictionary of means/standard-deviations for each column, for each group.
-        self.grps_ = ...
+        g = df.columns[0]
+        self.grps_ = {}
+        
+        for gp in df[g]:
+            for col in df.columns[1:]:
+                vals = df[df[g] == gp][col]
+                self.grps_.update({f'{gp}_{col}':[vals.mean(), vals.std()]})        
 
         return self
 
@@ -118,12 +144,25 @@ class StdScalerByGroup(BaseEstimator, TransformerMixin):
         
 
         # Define a helper function here?
+        def zscore(gp,col):
+            ms = self.grps_[f'{gp}_{col}']
+            try:
+                return(gp_df[col].apply(lambda x: (x-ms[0])/ms[1]))
+            except:
+                return None
+
 
         # X may not be a dataframe (e.g. np.array)
-
         df = pd.DataFrame(X)
-        
-        return ...
+        new_df = pd.DataFrame()
+        g = df.columns[0]
+        for gp in df[g].unique():
+            gp_df = (df[df[g] == gp])
+            for col in df.columns[1:]:
+                gp_df.loc[:,col] = zscore(gp,col)
+            new_df = pd.concat([new_df,gp_df])
+
+        return new_df.drop(g, axis=1)
 
 
 # ---------------------------------------------------------------------
@@ -140,7 +179,7 @@ def eval_toy_model():
     True
     """
 
-    return ...
+    return [(2.7551086974518118,0.40068025802737284),(2.3148336164355277,0.5589841023411486),(2.3518910318553576,0.5449753026887407)]
 
 
 # ---------------------------------------------------------------------
@@ -160,7 +199,20 @@ def tree_reg_perf(galton):
     True
     """
 
-    return ...
+    X = galton.drop(['childHeight'], axis=1)
+    y = galton.childHeight
+    X_train, X_test, y_train, y_test = train_test_split(X, y)
+
+    l = []
+    k = []
+    for i in range(1,21):
+        d = DecisionTreeRegressor(max_depth=i).fit(X_train, y_train)
+        pred = d.predict(X_test)
+        l.append(np.sqrt(np.mean((pred-y_test.to_numpy())**2)))
+        pred = d.predict(X_train)
+        k.append(np.sqrt(np.mean((pred-y_train.to_numpy())**2)))
+    
+    return pd.DataFrame({'train_err':k, 'test_err':l}) 
 
 
 def knn_reg_perf(galton):
@@ -173,7 +225,20 @@ def knn_reg_perf(galton):
     True
     """
 
-    return ...
+    X = galton.drop(['childHeight'], axis=1)
+    y = galton.childHeight
+    X_train, X_test, y_train, y_test = train_test_split(X, y)
+
+    l = []
+    k = []
+    for i in range(1,21):
+        d = KNeighborsRegressor(n_neighbors=i).fit(X_train, y_train)
+        pred = d.predict(X_test)
+        l.append(np.sqrt(np.mean((pred-y_test.to_numpy())**2)))
+        pred = d.predict(X_train)
+        k.append(np.sqrt(np.mean((pred-y_train.to_numpy())**2)))
+    
+    return pd.DataFrame({'train_err':k, 'test_err':l})
 
 # ---------------------------------------------------------------------
 # Question # 6
